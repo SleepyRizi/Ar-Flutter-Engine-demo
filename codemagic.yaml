@@ -2,29 +2,33 @@ workflows:
   ios-debug:
     name: iOS debug build (patch AR engine)
     environment:
-      flutter: stable         # or pin: 3.22.x, etc.
+      flutter: stable
       xcode: latest
 
     scripts:
-      # 1️⃣ Clean & get Flutter packages
+      # 1️⃣ Clean & fetch packages
       - name: Flutter clean & pub get
         script: |
           flutter clean
           flutter pub get
 
-      # 2️⃣ 🩹  Create podspec for ar_flutter_plugin_engine
+      # 2️⃣ Ensure the Podfile adds GLTFSceneKit
+      - name: Inject GLTFSceneKit pod
+        script: |
+          PODFILE_PATH="ios/Podfile"
+          if ! grep -q "pod 'GLTFSceneKit'" "$PODFILE_PATH"; then
+            echo "Adding pod 'GLTFSceneKit' to Podfile"
+            awk '/target .Runner./ && c==0 {print "  pod '\''GLTFSceneKit'\''"; c=1}1' "$PODFILE_PATH" > "$PODFILE_PATH.tmp"
+            mv "$PODFILE_PATH.tmp" "$PODFILE_PATH"
+          fi
+
+      # 3️⃣ 🩹  Create podspec for ar_flutter_plugin_engine (with dependency)
       - name: Patch ar_flutter_plugin_engine podspec
         script: |
           set -e
-
-          # ----- locate pub-cache copy of the plugin -----
           CACHE_DIR=$(find "$HOME/.pub-cache" -type d -name "ar_flutter_plugin_engine-*" | head -n 1)
-          echo "Plugin cache dir: $CACHE_DIR"
           mkdir -p "$CACHE_DIR/ios"
-
           PODSPEC_PATH="$CACHE_DIR/ios/ar_flutter_plugin_engine.podspec"
-
-          # ----- write podspec only once -----
           if [ ! -f "$PODSPEC_PATH" ]; then
             printf '%s\n' \
               "Pod::Spec.new do |s|" \
@@ -38,23 +42,23 @@ workflows:
               "  s.source_files = 'Classes/**/*.{h,m,mm,swift}'" \
               "  s.public_header_files = 'Classes/**/*.h'" \
               "  s.dependency 'Flutter'" \
+              "  s.dependency 'GLTFSceneKit'" \
               "  s.platform = :ios, '12.0'" \
               "end" > "$PODSPEC_PATH"
           fi
-
-          # ----- copy into .symlinks folder (rebuilt by Flutter) -----
+          # copy into .symlinks, which podhelper will recreate
           SYMLINK_DIR="ios/.symlinks/plugins/ar_flutter_plugin_engine/ios"
           mkdir -p "$SYMLINK_DIR"
           cp -f "$PODSPEC_PATH" "$SYMLINK_DIR/"
 
-      # 3️⃣ CocoaPods install
+      # 4️⃣ CocoaPods install
       - name: CocoaPods install
         script: |
           cd ios
           pod install --repo-update
           cd ..
 
-      # 4️⃣ Build (no codesign in CI)
+      # 5️⃣ Build (no codesign)
       - name: Flutter build iOS (debug, no-codesign)
         script: |
           flutter build ios --debug --no-codesign
