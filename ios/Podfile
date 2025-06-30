@@ -1,26 +1,39 @@
-# ------------------------------ #
-#  Podfile for Flutter ≥ 3.0     #
-# ------------------------------ #
+platform :ios, '12.0'
 
-platform :ios, '12.0'            # <-- 1 line you were missing
-
-# CocoaPods analytics disabled.
+# Disable CocoaPods analytics.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
-# Path to the Flutter application (relative to this Podfile)
-flutter_application_path = File.expand_path('..', __dir__)
-load File.join(flutter_application_path,
-               'packages', 'flutter_tools', 'bin', 'podhelper.rb')
+# -------- Figure out where the Flutter SDK is --------
+def flutter_root
+  # Generated.xcconfig is created by `flutter pub get`
+  xcconfig_path = File.expand_path(File.join('Flutter', 'Generated.xcconfig'), __dir__)
+  unless File.exist?(xcconfig_path)
+    raise "#{xcconfig_path} missing. Run `flutter pub get` first."
+  end
 
+  File.foreach(xcconfig_path) do |line|
+    m = line.match(/FLUTTER_ROOT=(.*)/)
+    return m[1].strip if m
+  end
+  raise 'FLUTTER_ROOT not found in Generated.xcconfig'
+end
+
+require File.expand_path(
+  File.join('packages', 'flutter_tools', 'bin', 'podhelper'),
+  flutter_root
+)
+
+flutter_ios_podfile_setup        # <- installs all Flutter & plugin pods
+
+# ------- Your app target -------
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  # Let Flutter add the pods for itself and every plugin
-  install_all_flutter_pods flutter_application_path
+  flutter_additional_ios_build_settings(target)
 end
 
-# -------- permission flags you pasted --------
+# ------- Permissions block you added -------
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
@@ -37,4 +50,3 @@ post_install do |installer|
     end
   end
 end
-# ---------------------------------------------
