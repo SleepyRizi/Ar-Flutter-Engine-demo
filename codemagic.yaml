@@ -1,22 +1,22 @@
 workflows:
   ios-debug:
-    name: iOS debug build (AR engine patch)
+    name: iOS debug build (patch AR engine)
     environment:
-      flutter: stable          # or pin: 3.22.1 etc.
+      flutter: stable        # or pin: 3.22.1 etc.
       xcode: latest
     scripts:
-      # 1️⃣ Get Flutter deps
+      # 1️⃣ Clean & fetch Dart deps
       - name: Flutter clean & pub get
         script: |
           flutter clean
           flutter pub get
 
-      # 2️⃣ 🩹 Drop a minimal podspec so CocoaPods can see the plugin
+      # 2️⃣ 🩹  Create a minimal podspec so CocoaPods can see the plugin
       - name: Patch ar_flutter_plugin_engine podspec
         script: |
-          PLUGIN_SYMLINK=".symlinks/plugins/ar_flutter_plugin_engine/ios"
-          mkdir -p "$PLUGIN_SYMLINK"
-          PODSPEC="$PLUGIN_SYMLINK/ar_flutter_plugin_engine.podspec"
+          PLUGIN_DIR="ios/.symlinks/plugins/ar_flutter_plugin_engine/ios"
+          mkdir -p "$PLUGIN_DIR"
+          PODSPEC="$PLUGIN_DIR/ar_flutter_plugin_engine.podspec"
           if [ ! -f "$PODSPEC" ]; then
             cat <<'SPEC' > "$PODSPEC"
   Pod::Spec.new do |s|
@@ -35,15 +35,15 @@ workflows:
   SPEC
   fi
 
-# 3️⃣ Run CocoaPods
+# 3️⃣ Install CocoaPods deps
 - name: CocoaPods install
   script: |
     cd ios
     pod install --repo-update
     cd ..
 
-# 4️⃣ Build the app (no automatic codesign)
-- name: Flutter build iOS
+# 4️⃣ Build the app (codesigning off for CI)
+- name: Flutter build iOS (debug, no-codesign)
   script: |
     flutter build ios --debug --no-codesign
 
