@@ -1,31 +1,40 @@
+# ------------------------------ #
+#  Podfile for Flutter ≥ 3.0     #
+# ------------------------------ #
+
+platform :ios, '12.0'            # <-- 1 line you were missing
+
+# CocoaPods analytics disabled.
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+# Path to the Flutter application (relative to this Podfile)
+flutter_application_path = File.expand_path('..', __dir__)
+load File.join(flutter_application_path,
+               'packages', 'flutter_tools', 'bin', 'podhelper.rb')
+
+target 'Runner' do
+  use_frameworks!
+  use_modular_headers!
+
+  # Let Flutter add the pods for itself and every plugin
+  install_all_flutter_pods flutter_application_path
+end
+
+# -------- permission flags you pasted --------
 post_install do |installer|
-    installer.pods_project.targets.each do |target|
-      flutter_additional_ios_build_settings(target)
-      target.build_configurations.each do |config|
-        # Additional configuration options could already be set here
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
 
-        # BEGINNING OF WHAT YOU SHOULD ADD
-        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
-          '$(inherited)',
-
-          ## dart: PermissionGroup.camera
-          'PERMISSION_CAMERA=1',
-
-          ## dart: PermissionGroup.photos
-          'PERMISSION_PHOTOS=1',
-
-          ## dart: [PermissionGroup.location, PermissionGroup.locationAlways, PermissionGroup.locationWhenInUse]
-          'PERMISSION_LOCATION=1',
-
-          ## dart: PermissionGroup.sensors
-          'PERMISSION_SENSORS=1',
-
-          ## dart: PermissionGroup.bluetooth
-          'PERMISSION_BLUETOOTH=1',
-
-          # add additional permission groups if required
-        ]
-        # END OF WHAT YOU SHOULD ADD
-      end
+    target.build_configurations.each do |config|
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+        '$(inherited)',
+        'PERMISSION_CAMERA=1',
+        'PERMISSION_PHOTOS=1',
+        'PERMISSION_LOCATION=1',
+        'PERMISSION_SENSORS=1',
+        'PERMISSION_BLUETOOTH=1'
+      ]
     end
   end
+end
+# ---------------------------------------------
