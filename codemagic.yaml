@@ -2,47 +2,48 @@ workflows:
   ios-debug:
     name: iOS debug build (patch AR engine)
     environment:
-      flutter: stable        # or pin: 3.22.1 etc.
+      flutter: stable        # or pin a specific version
       xcode: latest
     scripts:
-      # 1️⃣ Clean & fetch Dart deps
+      # 1️⃣ Clean and fetch Flutter packages
       - name: Flutter clean & pub get
         script: |
           flutter clean
           flutter pub get
 
-      # 2️⃣ 🩹  Create a minimal podspec so CocoaPods can see the plugin
+      # 2️⃣ 🩹  Write a minimal podspec so CocoaPods can see the plugin
       - name: Patch ar_flutter_plugin_engine podspec
         script: |
           PLUGIN_DIR="ios/.symlinks/plugins/ar_flutter_plugin_engine/ios"
           mkdir -p "$PLUGIN_DIR"
           PODSPEC="$PLUGIN_DIR/ar_flutter_plugin_engine.podspec"
+
           if [ ! -f "$PODSPEC" ]; then
             cat <<'SPEC' > "$PODSPEC"
-  Pod::Spec.new do |s|
-  s.name             = 'ar_flutter_plugin_engine'
-  s.version          = '1.0.1'
-  s.summary          = 'ARKit/ARCore Flutter plugin (engine fork)'
-  s.homepage         = 'https://pub.dev/packages/ar_flutter_plugin_engine'
-  s.license          = { :type => 'MIT' }
-  s.author           = { :name => 'Community' }
-  s.source           = { :path => '.' }
-  s.source_files     = 'Classes/**/*.{h,m,mm,swift}'
-  s.public_header_files = 'Classes/**/*.h'
-  s.dependency       'Flutter'
-  s.platform         = :ios, '12.0'
-  end
+            Pod::Spec.new do |s|
+              s.name             = 'ar_flutter_plugin_engine'
+              s.version          = '1.0.1'
+              s.summary          = 'ARKit/ARCore Flutter plugin (engine fork)'
+              s.homepage         = 'https://pub.dev/packages/ar_flutter_plugin_engine'
+              s.license          = { :type => 'MIT' }
+              s.author           = { :name => 'Community' }
+              s.source           = { :path => '.' }
+              s.source_files     = 'Classes/**/*.{h,m,mm,swift}'
+              s.public_header_files = 'Classes/**/*.h'
+              s.dependency       'Flutter'
+              s.platform         = :ios, '12.0'
+            end
   SPEC
   fi
 
-# 3️⃣ Install CocoaPods deps
+# 3️⃣ Install CocoaPods dependencies
 - name: CocoaPods install
   script: |
     cd ios
     pod install --repo-update
     cd ..
 
-# 4️⃣ Build the app (codesigning off for CI)
+# 4️⃣ Build the iOS app (no automatic codesign on CI)
 - name: Flutter build iOS (debug, no-codesign)
   script: |
     flutter build ios --debug --no-codesign
