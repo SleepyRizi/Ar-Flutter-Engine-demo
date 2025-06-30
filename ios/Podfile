@@ -1,21 +1,17 @@
 platform :ios, '12.0'
 
-# Disable CocoaPods analytics.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
-# -------- Figure out where the Flutter SDK is --------
+# ---- locate the Flutter SDK -------------------------------------------------
 def flutter_root
-  # Generated.xcconfig is created by `flutter pub get`
-  xcconfig_path = File.expand_path(File.join('Flutter', 'Generated.xcconfig'), __dir__)
-  unless File.exist?(xcconfig_path)
-    raise "#{xcconfig_path} missing. Run `flutter pub get` first."
-  end
+  xcconfig = File.expand_path(File.join('Flutter', 'Generated.xcconfig'), __dir__)
+  raise "#{xcconfig} missing; run `flutter pub get`" unless File.exist?(xcconfig)
 
-  File.foreach(xcconfig_path) do |line|
+  File.foreach(xcconfig) do |line|
     m = line.match(/FLUTTER_ROOT=(.*)/)
     return m[1].strip if m
   end
-  raise 'FLUTTER_ROOT not found in Generated.xcconfig'
+  raise 'FLUTTER_ROOT not set in Generated.xcconfig'
 end
 
 require File.expand_path(
@@ -23,22 +19,22 @@ require File.expand_path(
   flutter_root
 )
 
-flutter_ios_podfile_setup        # <- installs all Flutter & plugin pods
+# ---- install every Flutter / plugin pod -------------------------------------
+flutter_ios_podfile_setup          # <- auto-adds ar_flutter_plugin_engine etc.
 
-# ------- Your app target -------
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  flutter_additional_ios_build_settings(target)
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 end
 
-# ------- Permissions block you added -------
+# ---- add the permission flags & extra build settings ------------------------
 post_install do |installer|
-  installer.pods_project.targets.each do |target|
-    flutter_additional_ios_build_settings(target)
+  installer.pods_project.targets.each do |t|
+    flutter_additional_ios_build_settings(t)
 
-    target.build_configurations.each do |config|
+    t.build_configurations.each do |config|
       config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
         '$(inherited)',
         'PERMISSION_CAMERA=1',
